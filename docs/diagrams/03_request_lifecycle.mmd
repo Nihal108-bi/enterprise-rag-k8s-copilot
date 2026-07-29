@@ -1,0 +1,42 @@
+---
+title: Complete Request Lifecycle - Enterprise RAG
+---
+sequenceDiagram
+    actor User as SRE User
+    participant UI as Client / Streamlit
+    participant API as FastAPI /query
+    participant Guard as Security Pipeline
+    participant Graph as LangGraph
+    participant Router as Intent Router
+    participant RAG as RAG Service
+    participant SQL as SQL Service
+    participant LLM as OpenAI
+    participant DB as Postgres / Qdrant / Redis
+
+    User->>UI: Ask Kubernetes or ops question
+    UI->>API: POST /query with Bearer JWT
+    API->>Guard: validate, authenticate, rate limit, budget
+    Guard->>Guard: restructure input, scan prompt, redact PII
+    Guard->>Graph: invoke graph with question, user_id, flags
+    Graph->>Router: classify intent
+    Router-->>Graph: rag, sql, or hybrid
+
+    alt RAG question
+        Graph->>RAG: retrieve and generate
+        RAG->>DB: embedding cache and Qdrant search
+        RAG->>LLM: answer with spotlighted context
+        LLM-->>RAG: grounded answer
+    else SQL question
+        Graph->>SQL: generate SQL from schema
+        SQL->>LLM: produce SELECT query JSON
+        SQL-->>Graph: SQL + explanation
+        Graph-->>API: interrupt with pending_sql
+        API-->>UI: ask user for approval
+    else Hybrid question
+        Graph->>RAG: retrieve docs
+        Graph->>SQL: generate SQL
+        Graph-->>API: interrupt with pending_sql
+    end
+
+    API->>Guard: output moderation and redaction
+    Guard-->>UI: ChatResponse

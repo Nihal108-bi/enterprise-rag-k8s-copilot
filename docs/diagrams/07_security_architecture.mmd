@@ -1,0 +1,18 @@
+---
+title: Security Architecture - 9 Defensive Layers
+---
+flowchart TD
+    A["POST /query"] --> L1["L1 Pydantic Validation<br/>length, empty input, regex injection patterns"]
+    L1 --> L4A["L4a JWT Authentication<br/>get_current_user"]
+    L4A --> L4B["L4b Rate Limiting<br/>per-user sliding window"]
+    L4B --> L6["L6 Token Budget<br/>daily per-user token cap"]
+    L6 --> L5["L5 Input Restructuring<br/>truncate or summarize long input"]
+    L5 --> L2["L2 Input Guard<br/>llm-guard prompt injection, toxicity, ban topics"]
+    L2 --> L7A["L7a Input Moderation + PII Redaction"]
+    L7A --> Graph["LangGraph Invoke"]
+    Graph --> L3["L3 Hardened System Prompt<br/>user input is untrusted"]
+    L3 --> L8["L8 Spotlighting<br/>retrieved chunks wrapped as data"]
+    L8 --> Gen["LLM Generation"]
+    Gen --> L7B["L7b Output Moderation + PII Redaction"]
+    L7B --> L9["L9 Output Validation<br/>Pydantic schema + retry path"]
+    L9 --> Response["ChatResponse"]

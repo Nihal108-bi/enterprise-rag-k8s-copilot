@@ -1,0 +1,17 @@
+---
+title: Evaluation Architecture - Ragas and Post Checks
+---
+flowchart TD
+    Goldens["eval/seed_questions.yaml<br/>golden questions, sources, keywords"] --> Loader["eval/schema.py<br/>Pydantic validation"]
+    Loader --> Profiles["eval/profiles.py<br/>naive, hybrid, rerank, hyde, crag, all"]
+    Profiles --> Runner["eval/run_ragas.py"]
+    Runner --> Invoker["eval/invokers.py<br/>service invocation"]
+    Invoker --> RAG["run_rag_with_trace_no_cache"]
+    RAG --> Rows["Answers + Retrieved Contexts + Sources"]
+
+    Rows --> Ragas["Ragas Metrics<br/>faithfulness, context precision,<br/>context recall, answer relevancy"]
+    Rows --> PostChecks["Custom Post Checks<br/>source overlap, forbidden keywords"]
+    Ragas --> Aggregate["eval/reporting.py<br/>aggregate metrics"]
+    PostChecks --> Aggregate
+    Aggregate --> Results["eval/results/*.json<br/>recruiter/interview evidence"]
+    Results --> Streamlit["Streamlit Evaluation Dashboard"]

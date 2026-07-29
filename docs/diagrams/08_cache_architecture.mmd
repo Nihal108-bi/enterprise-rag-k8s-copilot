@@ -1,0 +1,18 @@
+---
+title: Cache Architecture - Five Cost Control Tiers
+---
+flowchart TD
+    Q["Incoming Question"] --> Intent["Intent Router Cache<br/>TTL 24h"]
+    Q --> RAGCache["RAG Answer Cache<br/>TTL 1h"]
+    Q --> SQLGen["SQL Generation Cache<br/>TTL 24h"]
+    SQL["Normalized SELECT SQL"] --> SQLResult["SQL Result Cache<br/>TTL 15m"]
+    Text["Text Chunk or Query Text"] --> Embedding["Embedding Cache<br/>TTL 7d"]
+
+    Intent --> Redis[("Upstash Redis")]
+    RAGCache --> Redis
+    SQLGen --> Redis
+    SQLResult --> Redis
+    Embedding --> Redis
+
+    Redis --> Fallback["In-Memory Fallback<br/>when Redis is not configured"]
+    Redis --> Stats["/admin/cache/stats<br/>hits, misses, sets, hit rate"]

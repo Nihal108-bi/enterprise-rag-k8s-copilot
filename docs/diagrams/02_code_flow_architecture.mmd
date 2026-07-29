@@ -1,0 +1,41 @@
+---
+title: Code Flow Architecture - Enterprise RAG
+---
+flowchart LR
+    Main["app/main.py<br/>FastAPI app"] --> Routers["API Routers"]
+    Routers --> AuthAPI["app/api/auth.py<br/>register/login"]
+    Routers --> QueryAPI["app/api/query.py<br/>query + SQL resume"]
+    Routers --> AdminAPI["app/api/admin.py<br/>health + cache stats"]
+
+    AuthAPI --> AuthMW["app/middleware/auth.py<br/>JWT + password hashing"]
+    QueryAPI --> RateLimit["app/middleware/rate_limiter.py"]
+    QueryAPI --> Security["app/security/*<br/>guards, budgets, validation"]
+    QueryAPI --> Graph["app/core/graph.py<br/>LangGraph"]
+
+    Graph --> State["app/core/state.py<br/>GraphState"]
+    Graph --> RouterSvc["app/services/router_service.py"]
+    Graph --> RagSvc["app/services/rag_service.py"]
+    Graph --> SqlSvc["app/services/sql_service.py"]
+    Graph --> LlmSvc["app/services/llm_service.py"]
+
+    RagSvc --> Embeddings["embedding_service.py"]
+    RagSvc --> VectorStore["vector_store.py"]
+    RagSvc --> Sparse["sparse_vector_service.py"]
+    RagSvc --> Rerank["reranking.py"]
+    RagSvc --> Hyde["hyde.py"]
+    RagSvc --> Crag["crag.py"]
+    RagSvc --> SelfRag["self_reflective.py"]
+    RagSvc --> Web["web_search.py"]
+
+    Embeddings --> Cache["query_cache_service.py"]
+    SqlSvc --> Cache
+    RouterSvc --> Cache
+    VectorStore --> Qdrant[("Qdrant")]
+    SqlSvc --> Postgres[("PostgreSQL")]
+    Cache --> Redis[("Redis or in-memory fallback")]
+    LlmSvc --> OpenAI["OpenAI API"]
+
+    Seed["scripts/seed_db.py"] --> Processor["document_processor.py"]
+    Processor --> VectorStore
+    Eval["eval/run_ragas.py"] --> Invoker["eval/invokers.py"]
+    Invoker --> RagSvc

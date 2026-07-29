@@ -1,0 +1,36 @@
+---
+title: System Design Architecture - Enterprise RAG
+---
+flowchart TD
+    User["SRE / Platform Engineer"] --> UI["Streamlit Demo UI or API Client"]
+    UI --> Auth["Auth Endpoints<br/>/auth/register, /auth/login"]
+    UI --> Query["Query Endpoint<br/>POST /query"]
+
+    Auth --> PostgresUsers[("PostgreSQL<br/>users table")]
+    Auth --> JWT["JWT Access Token"]
+    JWT --> Query
+
+    Query --> GuardrailStack["Request Guardrail Stack<br/>validation, auth, rate limit, budget,<br/>input restructuring, llm-guard, PII redaction"]
+    GuardrailStack --> Graph["LangGraph Orchestrator"]
+
+    Graph --> Router["Intent Router<br/>rag | sql | hybrid"]
+    Router --> RAG["RAG Pipeline"]
+    Router --> SQL["Text2SQL Pipeline"]
+    Router --> Hybrid["Hybrid Path<br/>RAG + SQL"]
+
+    RAG --> Qdrant[("Qdrant<br/>dense vectors + sparse search")]
+    RAG --> Tavily["Tavily Web Fallback"]
+    SQL --> PostgresOps[("PostgreSQL<br/>K8s operational schema")]
+    SQL --> Approval["Human SQL Approval<br/>LangGraph interrupt/resume"]
+    Hybrid --> RAG
+    Hybrid --> SQL
+
+    Graph --> Redis[("Upstash Redis<br/>intent, embedding, RAG, SQL caches")]
+    Graph --> Checkpoints[("PostgreSQL<br/>LangGraph checkpoints")]
+
+    RAG --> LLM["OpenAI GPT-4o / GPT-4o-mini"]
+    SQL --> LLM
+    Hybrid --> LLM
+    LLM --> OutputGuard["Output Moderation + Validation"]
+    OutputGuard --> Response["ChatResponse<br/>answer, sources, confidence, metadata"]
+    Response --> UI

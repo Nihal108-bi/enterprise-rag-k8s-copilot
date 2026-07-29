@@ -1,0 +1,36 @@
+---
+title: RAG Retrieval Architecture - Hybrid Search, HyDE, Rerank, CRAG
+---
+flowchart TD
+    Q["User Question"] --> Cache{"RAG Answer Cache Hit?"}
+    Cache -->|Yes| Cached["Return Cached ChatResponse"]
+    Cache -->|No| Mode{"Retrieval Mode"}
+
+    Mode -->|Dense| Dense["OpenAI Embedding<br/>Qdrant cosine search"]
+    Mode -->|Sparse| Sparse["TF-IDF Sparse Search<br/>exact Kubernetes terms"]
+    Mode -->|Hybrid| Hybrid["Dense + Sparse Search"]
+    Hybrid --> RRF["Reciprocal Rank Fusion<br/>merge ranked lists"]
+
+    Q --> Hyde{"HyDE Enabled?"}
+    Hyde -->|Yes| Hypotheses["Generate hypothetical answers"]
+    Hypotheses --> HydeEmbed["Embed hypotheses + question"]
+    HydeEmbed --> Dense
+    Hyde -->|No| Mode
+
+    Dense --> Candidates["Initial Candidate Chunks"]
+    Sparse --> Candidates
+    RRF --> Candidates
+    Candidates --> Rerank{"Rerank Enabled?"}
+    Rerank -->|Yes| CrossEncoder["Cross-Encoder / Voyage Reranker"]
+    Rerank -->|No| TopK["Top-k Chunks"]
+    CrossEncoder --> TopK
+
+    TopK --> CRAG{"CRAG Grade >= Threshold?"}
+    CRAG -->|Yes| Spotlight["Spotlight Context<br/>retrieved data is not instruction"]
+    CRAG -->|No| Web["Tavily Web Search Fallback"]
+    Web --> Spotlight
+    Spotlight --> Generate["LLM Answer Generation"]
+    Generate --> SelfRAG{"Self-RAG Enabled?"}
+    SelfRAG -->|Yes| Reflect["Reflect and retry if weak"]
+    SelfRAG -->|No| Validate["Return Answer"]
+    Reflect --> Validate

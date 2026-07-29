@@ -1,0 +1,12 @@
+---
+title: Document Ingestion Architecture - K8s Docs to Qdrant
+---
+flowchart LR
+    Seed["make seed / scripts/seed_db.py"] --> Files["seed/docs/true_data + noisy_data"]
+    Files --> Processor["DocumentProcessor<br/>Docling + HybridChunker"]
+    Processor --> Chunks["RetrievedChunk objects<br/>text + source metadata"]
+    Chunks --> Embeddings["OpenAI Embeddings<br/>text-embedding-3-small"]
+    Embeddings --> EmbCache["Embedding Cache"]
+    Embeddings --> Upsert["vector_store.upsert_chunks"]
+    Upsert --> Qdrant[("Qdrant Collection<br/>documents")]
+    Qdrant --> Retrieval["Dense / Sparse / Hybrid Retrieval"]

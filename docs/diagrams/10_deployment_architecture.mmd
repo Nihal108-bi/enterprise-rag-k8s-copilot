@@ -1,0 +1,23 @@
+---
+title: Deployment Architecture - Local and Production Path
+---
+flowchart TD
+    Dev["Developer Machine"] --> Compose["Docker Compose"]
+    Compose --> App["FastAPI App Container<br/>port 8000"]
+    Compose --> PG["Postgres 16 Container<br/>port 5432"]
+    Compose --> Qdrant["Qdrant Container<br/>ports 6333/6334"]
+    App --> PG
+    App --> Qdrant
+    App --> Upstash["Upstash Redis"]
+    App --> OpenAI["OpenAI API"]
+    App --> Tavily["Tavily API"]
+
+    subgraph Production["Production Upgrade Path"]
+        ALB["AWS ALB"] --> ECS["ECS Fargate Service"]
+        ECS --> RDS["RDS PostgreSQL"]
+        ECS --> ManagedQdrant["Managed Qdrant / Vector DB"]
+        ECS --> Redis["Upstash or ElastiCache Redis"]
+        ECS --> S3["S3 Document Cache"]
+        ECS --> CloudWatch["CloudWatch Logs and Metrics"]
+        Secrets["AWS Secrets Manager"] --> ECS
+    end

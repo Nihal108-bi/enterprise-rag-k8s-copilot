@@ -1,0 +1,16 @@
+---
+title: LangGraph State Machine - RAG, SQL, Hybrid
+---
+stateDiagram-v2
+    [*] --> route_intent
+    route_intent --> generate_answer : intent = rag
+    route_intent --> generate_sql_node : intent = sql
+    route_intent --> retrieve_rag : intent = hybrid
+
+    retrieve_rag --> generate_sql_node : add doc context for hybrid
+    generate_sql_node --> request_sql_approval
+    request_sql_approval --> execute_sql : approved
+    request_sql_approval --> generate_answer : rejected
+    execute_sql --> generate_answer
+    generate_answer --> finalize
+    finalize --> [*]

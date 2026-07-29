@@ -1,0 +1,33 @@
+---
+title: Text2SQL Approval Architecture - Safe SQL Execution
+---
+sequenceDiagram
+    actor User as SRE User
+    participant API as FastAPI /query
+    participant Graph as LangGraph
+    participant SQL as SQLService
+    participant LLM as OpenAI SQL Generator
+    participant PG as PostgreSQL
+    participant Cache as SQL Cache
+
+    User->>API: Ask operational data question
+    API->>Graph: invoke with thread_id
+    Graph->>SQL: generate_sql(question)
+    SQL->>Cache: check sql_gen cache
+    Cache-->>SQL: miss or cached SQL
+    SQL->>PG: introspect public schema if needed
+    SQL->>LLM: schema + question
+    LLM-->>SQL: JSON {sql, explanation}
+    SQL-->>Graph: generated SQL
+    Graph-->>API: interrupt pending_sql with query_id
+    API-->>User: show SQL for review
+    User->>API: POST /query/sql/execute approved=true
+    API->>Graph: Command(resume={approved:true})
+    Graph->>SQL: execute_sql(sql)
+    SQL->>SQL: enforce SELECT-only and block destructive keywords
+    SQL->>Cache: check sql_result cache
+    SQL->>PG: execute SELECT if cache miss
+    PG-->>SQL: rows
+    SQL-->>Graph: serialized rows
+    Graph-->>API: final answer
+    API-->>User: ChatResponse
